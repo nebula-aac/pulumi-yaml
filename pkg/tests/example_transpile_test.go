@@ -196,7 +196,7 @@ func newPluginLoader() schema.Loader {
 type mockPackageLoader struct{ schema.Loader }
 
 func (l mockPackageLoader) LoadPackage(name string) (pulumiyaml.Package, error) {
-	pkg, err := l.Loader.LoadPackage(name, nil)
+	pkg, err := schema.LoadPackageReference(l.Loader, name, nil)
 	if err != nil {
 		return nil, err
 	}

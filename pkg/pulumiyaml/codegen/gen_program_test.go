@@ -51,7 +51,7 @@ func (l testPackageLoader) LoadPackage(name string) (pulumiyaml.Package, error) 
 		return FakePackage{l.T}, nil
 	}
 
-	pkg, err := rootPluginLoader.LoadPackage(name, nil)
+	pkg, err := schema.LoadPackageReference(rootPluginLoader, name, nil)
 	if err != nil {
 		return nil, err
 	}
