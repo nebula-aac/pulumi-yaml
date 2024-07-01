@@ -18,6 +18,8 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 
 	pbempty "github.com/golang/protobuf/ptypes/empty"
@@ -26,7 +28,6 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/common/version"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	pulumirpc "github.com/pulumi/pulumi/sdk/v3/proto/go"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/pulumi/pulumi-yaml/pkg/pulumiyaml"
 	"github.com/pulumi/pulumi-yaml/pkg/pulumiyaml/ast"
@@ -53,8 +54,8 @@ func NewLanguageHost(engineAddress, tracing string, compiler string) pulumirpc.L
 	}
 }
 
-func (host *yamlLanguageHost) loadTemplate() (*ast.TemplateDecl, syntax.Diagnostics, error) {
-	if host.template != nil {
+func (host *yamlLanguageHost) loadTemplate(compilerEnv []string) (*ast.TemplateDecl, syntax.Diagnostics, error) {
+	if host.template != nil && host.compiler == "" {
 		return host.template, host.diags, nil
 	}
 
@@ -64,7 +65,7 @@ func (host *yamlLanguageHost) loadTemplate() (*ast.TemplateDecl, syntax.Diagnost
 	if host.compiler == "" {
 		template, diags, err = pulumiyaml.Load()
 	} else {
-		template, diags, err = pulumiyaml.LoadFromCompiler(host.compiler, "")
+		template, diags, err = pulumiyaml.LoadFromCompiler(host.compiler, "", compilerEnv)
 	}
 	if err != nil {
 		return nil, diags, err
@@ -82,7 +83,7 @@ func (host *yamlLanguageHost) loadTemplate() (*ast.TemplateDecl, syntax.Diagnost
 func (host *yamlLanguageHost) GetRequiredPlugins(ctx context.Context,
 	req *pulumirpc.GetRequiredPluginsRequest,
 ) (*pulumirpc.GetRequiredPluginsResponse, error) {
-	template, diags, err := host.loadTemplate()
+	template, diags, err := host.loadTemplate(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +122,20 @@ func (host *yamlLanguageHost) Run(ctx context.Context, req *pulumirpc.RunRequest
 		}
 	}
 
-	template, diags, err := host.loadTemplate()
+	configValue := req.GetConfig()
+	jsonConfigValue, err := json.Marshal(configValue)
+	if err != nil {
+		return nil, err
+	}
+
+	compilerEnv := []string{
+		fmt.Sprintf(`PULUMI_STACK=%s`, req.GetStack()),
+		fmt.Sprintf(`PULUMI_ORGANIZATION=%s`, req.GetOrganization()),
+		fmt.Sprintf(`PULUMI_PROJECT=%s`, req.GetProject()),
+		fmt.Sprintf(`PULUMI_CONFIG=%s`, jsonConfigValue),
+	}
+
+	template, diags, err := host.loadTemplate(compilerEnv)
 	if err != nil {
 		return &pulumirpc.RunResponse{Error: err.Error()}, nil
 	}
@@ -204,7 +218,12 @@ func (host *yamlLanguageHost) GetProgramDependencies(ctx context.Context, req *p
 	return &pulumirpc.GetProgramDependenciesResponse{}, nil
 }
 
+// RuntimeOptionsPrompts returns a list of additional prompts to ask during `pulumi new`.
+func (host *yamlLanguageHost) RuntimeOptionsPrompts(context.Context, *pulumirpc.RuntimeOptionsRequest) (*pulumirpc.RuntimeOptionsResponse, error) {
+	return &pulumirpc.RuntimeOptionsResponse{}, nil
+}
+
 // About returns information about the runtime for this language.
-func (host *yamlLanguageHost) About(ctx context.Context, req *emptypb.Empty) (*pulumirpc.AboutResponse, error) {
+func (host *yamlLanguageHost) About(ctx context.Context, req *pulumirpc.AboutRequest) (*pulumirpc.AboutResponse, error) {
 	return &pulumirpc.AboutResponse{}, nil
 }

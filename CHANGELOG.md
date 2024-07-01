@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+## 1.9.0 (2024-06-26)
+
+### Improvements
+
+- Update pulumi/pulumi to v3.121.0.
+
+### Bug Fixes
+
+- When importing, don't error on ID expressions that are themselves unknown during preview.
+  [#591](https://github.com/pulumi/pulumi-yaml/pull/591)
+
+## 1.8.0 (2024-06-05)
+
+- Pass `PULUMI_STACK`, `PULUMI_ORGANIZATION`, `PULUMI_PROJECT` and `PULUMI_CONFIG` as environment variable to compiler process.
+  [#578](https://github.com/pulumi/pulumi-yaml/pull/578)
+
 ## 1.7.0 (2024-04-29)
 
 ### Improvements
