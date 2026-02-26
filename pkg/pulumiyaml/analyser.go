@@ -773,6 +773,9 @@ func (tc *typeCache) typeResource(r *Runner, node resourceNode) bool {
 				},
 			}})
 		}
+		if v.Options.EnvVarMappings != nil {
+			tc.assertTypeAssignable(ctx, v.Options.EnvVarMappings, &schema.MapType{ElementType: schema.StringType})
+		}
 	}
 
 	return true
@@ -1535,6 +1538,9 @@ func (e walker) walkResourceOptions(ctx *evalContext, opts ast.ResourceOptionsDe
 		return false
 	}
 	if !e.walkStringList(ctx, opts.HideDiffs) {
+		return false
+	}
+	if !e.walk(ctx, opts.EnvVarMappings) {
 		return false
 	}
 
